@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Image to RGB JSON Converter</title>
+  <style>
+    body { font-family: Arial; text-align: center; padding: 20px; }
+    canvas { display: none; }
+    button { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Image to RGB JSON Converter</h1>
+  <input type="file" id="imageInput" accept="image/*" />
+  <button onclick="processImage()">Convert to JSON</button>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    function processImage() {
+      const input = document.getElementById('imageInput');
+      const file = input.files[0];
+      if (!file) {
+        alert('Please upload an image.');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.getElementById('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+
+          const imageData = ctx.getImageData(0, 0, img.width, img.height);
+          const data = imageData.data;
+          const rgbArray = [];
+
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            rgbArray.push({ r, g, b });
+          }
+
+          const jsonStr = JSON.stringify(rgbArray, null, 2);
+          downloadJSON(jsonStr, 'image_rgb_data.json');
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function downloadJSON(jsonStr, filename) {
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
