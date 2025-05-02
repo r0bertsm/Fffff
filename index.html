@@ -3,20 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Image to RGB JSON Converter</title>
+  <title>Image & JSON Converter</title>
   <style>
     body { font-family: Arial; text-align: center; padding: 20px; }
-    canvas { display: none; }
-    button { margin-top: 10px; }
+    canvas { margin-top: 20px; border: 1px solid #ccc; }
+    input, button { margin-top: 10px; display: block; margin-left: auto; margin-right: auto; }
   </style>
 </head>
 <body>
   <h1>Image to RGB JSON Converter</h1>
+
+  <!-- Image Upload and Convert -->
   <input type="file" id="imageInput" accept="image/*" />
-  <button onclick="processImage()">Convert to JSON</button>
+  <button onclick="processImage()">Convert Image to JSON</button>
+
+  <!-- JSON Upload and Convert -->
+  <input type="file" id="jsonInput" accept=".json" />
+  <button onclick="jsonToImage()">Convert JSON to PNG</button>
+
   <canvas id="canvas"></canvas>
 
   <script>
+    let lastImageWidth = 0;
+    let lastImageHeight = 0;
+
     function processImage() {
       const input = document.getElementById('imageInput');
       const file = input.files[0];
@@ -33,6 +43,8 @@
           const ctx = canvas.getContext('2d');
           canvas.width = img.width;
           canvas.height = img.height;
+          lastImageWidth = img.width;
+          lastImageHeight = img.height;
           ctx.drawImage(img, 0, 0);
 
           const imageData = ctx.getImageData(0, 0, img.width, img.height);
@@ -46,7 +58,12 @@
             rgbArray.push({ r, g, b });
           }
 
-          const jsonStr = JSON.stringify(rgbArray, null, 2);
+          const jsonStr = JSON.stringify({
+            width: img.width,
+            height: img.height,
+            data: rgbArray
+          }, null, 2);
+
           downloadJSON(jsonStr, 'image_rgb_data.json');
         };
         img.src = event.target.result;
@@ -62,6 +79,46 @@
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
+    }
+
+    function jsonToImage() {
+      const input = document.getElementById('jsonInput');
+      const file = input.files[0];
+      if (!file) {
+        alert('Please upload a JSON file.');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const json = JSON.parse(event.target.result);
+        const { width, height, data } = json;
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = width;
+        canvas.height = height;
+
+        const imageData = ctx.createImageData(width, height);
+        for (let i = 0; i < data.length; i++) {
+          imageData.data[i * 4] = data[i].r;
+          imageData.data[i * 4 + 1] = data[i].g;
+          imageData.data[i * 4 + 2] = data[i].b;
+          imageData.data[i * 4 + 3] = 255; // alpha
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+
+        // Option to download
+        const pngUrl = canvas.toDataURL("image/png");
+        const a = document.createElement('a');
+        a.href = pngUrl;
+        a.download = "reconstructed_image.png";
+        a.textContent = "Download PNG";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      };
+      reader.readAsText(file);
     }
   </script>
 </body>
